@@ -4,9 +4,17 @@ Page space (pt, Y up, angles CCW) maps to sheet space (mm, Y down) about the
 sheet center. Positions flip in Y; rotation angles pass through unchanged
 because both KiCad and PostScript treat positive as visually counterclockwise.
 
-Gold artwork is emitted twice: on F.Cu and, with slightly wider strokes, on
-F.Mask, so the ENIG-plated copper shows through the black solder mask with a
-registration margin.
+Gold artwork is emitted twice: on the copper layer and, with slightly wider
+strokes, on the mask layer, so the ENIG-plated copper shows through the black
+solder mask with a registration margin.
+
+Back-face artwork (Board.back_items) goes to B.Cu/B.Mask mirrored about the
+sheet's vertical centerline with negated text angles and (justify mirror),
+which is KiCad's convention for text that reads correctly from the back
+(verified against kicad-cli --mirror output). Board cutouts are front-only.
+
+Symbol texts use DejaVu Sans: KiCad's stroke font lacks aleph and the card
+suits, and renders the pilcrow like a pi, which a lookup wheel cannot afford.
 """
 
 import math
@@ -66,47 +74,56 @@ class Emitter:
         self.n += 1
         return str(uuid.uuid5(UUID_NS, f"{self.board.name}:{self.n}"))
 
-    def xy(self, x: float, y: float) -> tuple[float, float]:
+    def xy(self, x: float, y: float, back: bool) -> tuple[float, float]:
+        if back:
+            return SHEET_CX - x * self.k, SHEET_CY - y * self.k
         return SHEET_CX + x * self.k, SHEET_CY - y * self.k
 
     def add(self, s: str):
         self.lines.append("  " + s + "\n")
 
-    def text(self, t: Text):
-        x, y = self.xy(t.x, t.y)
+    def gold_layers(self, back: bool):
+        return (("B.Cu", 0), ("B.Mask", MASK_BLOOM)) if back else (("F.Cu", 0), ("F.Mask", MASK_BLOOM))
+
+    def text(self, t: Text, back: bool):
+        x, y = self.xy(t.x, t.y, back)
         h = CAP * t.size * self.k
         w = max(0.16, h / 6)
-        for layer, bloom in (("F.Cu", 0), ("F.Mask", MASK_BLOOM)):
+        face = '(face "DejaVu Sans") ' if t.symbol else ""
+        angle = (-t.angle if back else t.angle) % 360
+        justify = " (justify mirror)" if back else ""
+        for layer, bloom in self.gold_layers(back):
             self.add(
-                f'(gr_text "{t.s}" (at {fmt(x)} {fmt(y)} {fmt(t.angle % 360)}) '
+                f'(gr_text "{t.s}" (at {fmt(x)} {fmt(y)} {fmt(angle)}) '
                 f'(layer "{layer}") (tstamp {self.uid()}) '
-                f"(effects (font (size {fmt(h)} {fmt(h)}) (thickness {fmt(w + bloom)}))))"
+                f"(effects (font {face}(size {fmt(h)} {fmt(h)}) (thickness {fmt(w + bloom)})){justify}))"
             )
 
-    def circle(self, c: Circle):
-        x, y = self.xy(c.x, c.y)
+    def circle(self, c: Circle, back: bool):
+        x, y = self.xy(c.x, c.y, back)
         w = max(0.15, c.width * self.k)
-        for layer, bloom in (("F.Cu", 0), ("F.Mask", MASK_BLOOM)):
+        for layer, bloom in self.gold_layers(back):
             self.add(
                 f"(gr_circle (center {fmt(x)} {fmt(y)}) (end {fmt(x + c.r * self.k)} {fmt(y)}) "
                 f"(stroke (width {fmt(w + bloom)}) (type default)) (fill none) "
                 f'(layer "{layer}") (tstamp {self.uid()}))'
             )
 
-    def seg(self, s: Seg):
-        x1, y1 = self.xy(s.x1, s.y1)
-        x2, y2 = self.xy(s.x2, s.y2)
+    def seg(self, s: Seg, back: bool):
+        x1, y1 = self.xy(s.x1, s.y1, back)
+        x2, y2 = self.xy(s.x2, s.y2, back)
         w = max(0.15, s.width * self.k)
-        for layer, bloom in (("F.Cu", 0), ("F.Mask", MASK_BLOOM)):
+        for layer, bloom in self.gold_layers(back):
             self.add(
                 f"(gr_line (start {fmt(x1)} {fmt(y1)}) (end {fmt(x2)} {fmt(y2)}) "
                 f"(stroke (width {fmt(w + bloom)}) (type default)) "
                 f'(layer "{layer}") (tstamp {self.uid()}))'
             )
 
-    def poly(self, p: Poly):
-        pts = " ".join(f"(xy {fmt(x)} {fmt(y)})" for x, y in (self.xy(*pt) for pt in p.pts))
-        for layer in ("F.Cu", "F.Mask"):
+    def poly(self, p: Poly, back: bool):
+        pts = " ".join(f"(xy {fmt(x)} {fmt(y)})"
+                       for x, y in (self.xy(*pt, back) for pt in p.pts))
+        for layer, _ in self.gold_layers(back):
             self.add(
                 f"(gr_poly (pts {pts}) (stroke (width 0) (type default)) (fill solid) "
                 f'(layer "{layer}") (tstamp {self.uid()}))'
@@ -126,7 +143,7 @@ class Emitter:
         )
 
     def edge_circle(self, c: EdgeCircle):
-        x, y = self.xy(c.x, c.y)
+        x, y = self.xy(c.x, c.y, False)
         self.add(
             f"(gr_circle (center {fmt(x)} {fmt(y)}) (end {fmt(x + c.r * self.k)} {fmt(y)}) "
             f'(stroke (width {fmt(EDGE_W)}) (type default)) (fill none) '
@@ -138,35 +155,52 @@ class Emitter:
         pts = []
         for ang in (a.a1, (a.a1 + a2) / 2, a2):
             px, py = polar(a.r, ang)
-            pts.append(self.xy(a.x + px, a.y + py))
+            pts.append(self.xy(a.x + px, a.y + py, False))
         self.edge_arc_pts(*pts)
 
     def window(self, win: Window):
-        x, y = self.xy(win.x, win.y)
-        h = win.side * self.k / 2
-        r = min(WINDOW_CORNER_R, h / 2)
-        # four sides, then a quarter arc at each corner, in sheet space
-        self.edge_line(x - h + r, y - h, x + h - r, y - h)
-        self.edge_line(x + h, y - h + r, x + h, y + h - r)
-        self.edge_line(x + h - r, y + h, x - h + r, y + h)
-        self.edge_line(x - h, y + h - r, x - h, y - h + r)
+        x, y = self.xy(win.x, win.y, False)
+        hx, hy = win.w * self.k / 2, win.h * self.k / 2
+        r = min(WINDOW_CORNER_R, hx / 2, hy / 2)
+        self.edge_line(x - hx + r, y - hy, x + hx - r, y - hy)
+        self.edge_line(x + hx, y - hy + r, x + hx, y + hy - r)
+        self.edge_line(x + hx - r, y + hy, x - hx + r, y + hy)
+        self.edge_line(x - hx, y + hy - r, x - hx, y - hy + r)
         # corner arcs: from the end of one side to the start of the next
         d = r * math.sqrt(2) / 2
-        self.edge_arc_pts((x + h - r, y - h), (x + h - r + d, y - h + r - d), (x + h, y - h + r))
-        self.edge_arc_pts((x + h, y + h - r), (x + h - r + d, y + h - r + d), (x + h - r, y + h))
-        self.edge_arc_pts((x - h + r, y + h), (x - h + r - d, y + h - r + d), (x - h, y + h - r))
-        self.edge_arc_pts((x - h, y - h + r), (x - h + r - d, y - h + r - d), (x - h + r, y - h))
+        self.edge_arc_pts((x + hx - r, y - hy), (x + hx - r + d, y - hy + r - d), (x + hx, y - hy + r))
+        self.edge_arc_pts((x + hx, y + hy - r), (x + hx - r + d, y + hy - r + d), (x + hx - r, y + hy))
+        self.edge_arc_pts((x - hx + r, y + hy), (x - hx + r - d, y + hy - r + d), (x - hx, y + hy - r))
+        self.edge_arc_pts((x - hx, y - hy + r), (x - hx + r - d, y - hy + r - d), (x - hx + r, y - hy))
+
+    def dispatch(self, item, back: bool):
+        kind = type(item)
+        if kind is Text:
+            self.text(item, back)
+        elif kind is Circle:
+            self.circle(item, back)
+        elif kind is Seg:
+            self.seg(item, back)
+        elif kind is Poly:
+            self.poly(item, back)
+        else:
+            if back:
+                raise ValueError(f"cutout {item} on the back face; edges are front-only")
+            if kind is EdgeCircle:
+                self.edge_circle(item)
+            elif kind is EdgeArc:
+                self.edge_arc(item)
+            elif kind is EdgeSeg:
+                self.edge_line(*self.xy(item.x1, item.y1, False),
+                               *self.xy(item.x2, item.y2, False))
+            else:
+                self.window(item)
 
     def run(self) -> str:
-        handlers = {
-            Text: self.text, Circle: self.circle, Seg: self.seg, Poly: self.poly,
-            EdgeCircle: self.edge_circle, EdgeArc: self.edge_arc, Window: self.window,
-        }
         for item in self.board.items:
-            if type(item) is EdgeSeg:
-                self.edge_line(*self.xy(item.x1, item.y1), *self.xy(item.x2, item.y2))
-            else:
-                handlers[type(item)](item)
+            self.dispatch(item, back=False)
+        for item in self.board.back_items:
+            self.dispatch(item, back=True)
         self.lines.append(")\n")
         return "".join(self.lines)
 

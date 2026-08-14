@@ -13,6 +13,16 @@ DIGIT_GLYPHS = {
     "six": "6", "seven": "7", "eight": "8", "nine": "9",
 }
 
+SYMBOL_GLYPHS = {
+    "multiply": "×", "aleph": "ℵ", "alpha": "α", "beta": "β", "Gamma": "Γ",
+    "Delta": "Δ", "epsilon": "ε", "eta": "η", "Theta": "Θ", "Lambda": "Λ",
+    "mu": "μ", "Xi": "Ξ", "Pi": "Π", "rho": "ρ", "Sigma": "Σ", "Phi": "Φ",
+    "Psi": "Ψ", "Omega": "Ω", "at": "@", "numbersign": "#", "percent": "%",
+    "cent": "¢", "yen": "¥", "Euro": "€", "currency": "¤", "circleplus": "⊕",
+    "dagger": "†", "daggerdbl": "‡", "section": "§", "paragraph": "¶",
+    "diamond": "◆", "heart": "♥", "space": " ",
+}
+
 
 def _permutation(ps: str, name: str) -> list[int]:
     m = re.search(rf"^/{name} \[([\d\s]+)\] def", ps, re.M)
@@ -46,3 +56,21 @@ def load(ps_path: Path, rust_gf32_path: Path) -> tuple[list[str], list[int], lis
         raise ValueError(f"PS charset {code} disagrees with rust charset {rust_chars}")
 
     return code, _permutation(ps, "perm"), _permutation(ps, "permV")
+
+
+def load_family_b(ps_path: Path) -> tuple[list[str], dict[str, int]]:
+    """Return (code2 symbols indexed by GF(32) value, logbase per disc)."""
+    ps = ps_path.read_text()
+
+    m = re.search(r"^/code2 \[((?:/\w+ ?)+)\] def", ps, re.M)
+    if not m:
+        raise ValueError("/code2 array not found in PS source")
+    names = m.group(1).replace("/", "").split()
+    code2 = [SYMBOL_GLYPHS[n] for n in names]
+    if len(code2) != 33 or len(set(code2)) != 33:
+        raise ValueError(f"unexpected /code2 array: {names}")
+
+    bases = [int(b) for b in re.findall(r"^  /logbase (\d+) def", ps, re.M)]
+    if len(bases) != 3:
+        raise ValueError(f"expected 3 /logbase definitions, found {bases}")
+    return code2, dict(zip(("fusion", "translation", "recovery"), bases))
