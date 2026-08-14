@@ -78,3 +78,11 @@ text angles and `(justify mirror)`, verified against `kicad-cli --mirror`.
 The center artwork of the color edition (sun, potion, dragon) is PHP-included
 in the source and absent from this bw build, so plain centers are faithful.
 The wheel-lock is likewise a PHP include and left out.
+
+## Fiber laser
+
+`generator/laserfiles.py` emits per-face SVGs for laser cutting and marking
+(black = mark, red hairline = cut, blue = reference outline for second-side
+setups), text pre-converted to paths via Inkscape. Defaults: ring wheels at
+Ø60mm, addition pair at Ø110mm, M3 pivot; see --b-diameter,
+--addition-diameter, --pivot-mm.
