@@ -8,8 +8,9 @@ copper.
 
 ## Layout
 
-- `generator/` — Python port of the wheel-drawing procedures. Emits KiCad 7
-  board files and gold-on-black preview SVGs. No dependencies beyond Python.
+- `generator/` — Python port of the wheel-drawing procedures, plus the fab
+  and laser emitters. The boards need nothing but Python; the other two
+  shell out to KiCad and Inkscape.
 - `out/` — where the boards, previews and proof table land. Generated,
   ignored, never edited by hand.
 
@@ -19,16 +20,21 @@ track the source they claim to encode.
 
 ## Regenerate
 
-Nothing under `out/` is tracked. This rebuilds it:
+Nothing under `out/` is tracked. Three commands rebuild all of it:
 
 ```
-python3 volvelles/generator/generate.py   # 1:1 scale, Ø4.2mm pivot
-python3 volvelles/generator/generate.py --scale 0.8 --pivot-mm 3.2
+python3 volvelles/generator/generate.py    # boards and previews
+python3 volvelles/generator/fabfiles.py    # gerber + drill zips (KiCad 7)
+python3 volvelles/generator/laserfiles.py  # laser SVGs (Inkscape)
 ```
 
-At 1:1 the addition stator is Ø189.1mm and the rotor Ø204.6mm across the grip
-ring. The two mount on one pivot (binding screw or brass eyelet; a nylon washer
-between the faces).
+`generate.py` takes `--scale` and `--pivot-mm`; `--scale 0.8 --pivot-mm 3.2`
+gives a smaller pair on an M3 pivot. At 1:1 the addition stator is Ø189.1mm
+and the rotor Ø204.6mm across the grip ring. The two mount on one pivot
+(binding screw or brass eyelet; a nylon washer between the faces).
+
+The [latest release](https://github.com/Gangleri42/codex32/releases/latest)
+carries the same package prebuilt, for boards without the toolchain.
 
 ## Verification
 
@@ -50,6 +56,10 @@ the ones in the repo file, so the boards come out the same from either.
 openings are drawn 0.1mm wider than the copper so registration error shows as
 a dark fringe on substrate, never as mask over gold. Window cutouts carry
 0.8mm corner radii for the router.
+
+`generator/fabfiles.py` plots the seven layers a board house reads and the
+Excellon drills, one zip per board. It refuses a package that came out short
+of the full layer set.
 
 ## The set
 
