@@ -17,12 +17,14 @@ Usage:
     python3 volvelles/generator/printfiles.py
     python3 volvelles/generator/printfiles.py --parts family-b --b-mm 205
     python3 volvelles/generator/printfiles.py --scale 1.03 --mode raised --relief 0.5
+    python3 volvelles/generator/printfiles.py --parts addition,family-b --zip
 """
 
 import argparse
 import subprocess
 import sys
 import time
+import zipfile
 from pathlib import Path
 
 import emit_solid
@@ -48,6 +50,18 @@ def render(scad: Path, stl: Path, openscad: str) -> float:
     t0 = time.time()
     run([openscad, "--export-format=binstl", "-o", str(stl), str(scad)])
     return time.time() - t0
+
+
+def pack(out: Path) -> None:
+    """Bundle every STL in `out` as the release asset, flat at the zip root."""
+    stls = sorted(out.glob("*.stl"))
+    if not stls:
+        raise SystemExit(f"no STLs under {out}; run printfiles.py first")
+    archive = out / "volvelles-3d-print.zip"
+    with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as z:
+        for f in stls:
+            z.write(f, f.name)
+    print(f"{archive.name}: {len(stls)} parts, {archive.stat().st_size // 1024}kB")
 
 
 def build(board, scale: float, o: SolidOpts, out: Path, inkscape: str, openscad: str) -> float:
@@ -99,6 +113,8 @@ def main() -> None:
                     help="total clearance between cavity and inlay if the slicer dislikes exact fits")
     ap.add_argument("--parts", default="addition",
                     help="comma list: addition, family-b, or one of the part names")
+    ap.add_argument("--zip", action="store_true",
+                    help="bundle every STL in --out into volvelles-3d-print.zip")
     ap.add_argument("--inkscape", default="inkscape")
     ap.add_argument("--openscad", default="openscad")
     args = ap.parse_args()
@@ -168,6 +184,8 @@ def main() -> None:
 
     if widest > 256:
         print(f"WARNING: widest part {widest:.1f}mm exceeds a 256mm build plate", file=sys.stderr)
+    if args.zip:
+        pack(args.out)
 
 
 if __name__ == "__main__":

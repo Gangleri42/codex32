@@ -125,6 +125,9 @@ inlay different filaments (AMS). The inlays fill their recesses, so the colours
 print flush in one solid. `--mode raised` lifts the inlay onto the top face
 instead; `--mode engrave` leaves it out for a single-colour print.
 
+`--zip` bundles everything in `out/3d/` as `volvelles-3d-print.zip`, the
+archive the release carries.
+
 The recess, line widths and font stems are sized for a 0.4mm nozzle. If the
 slicer dislikes two objects sharing a wall, add a hair of clearance with
 `--inlay-gap 0.1`.
