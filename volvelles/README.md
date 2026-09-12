@@ -20,12 +20,13 @@ track the source they claim to encode.
 
 ## Regenerate
 
-Nothing under `out/` is tracked. Three commands rebuild all of it:
+Nothing under `out/` is tracked. Four commands rebuild all of it:
 
 ```
 python3 volvelles/generator/generate.py    # boards and previews
 python3 volvelles/generator/fabfiles.py    # gerber + drill zips (KiCad 7)
 python3 volvelles/generator/laserfiles.py  # laser SVGs (Inkscape)
+python3 volvelles/generator/printfiles.py  # 3D-print solids (OpenSCAD + Inkscape)
 ```
 
 `generate.py` takes `--scale` and `--pivot-mm`; `--scale 0.8 --pivot-mm 3.2`
@@ -96,3 +97,49 @@ The wheel-lock is likewise a PHP include and left out.
 setups), text pre-converted to paths via Inkscape. Defaults: ring wheels at
 Ø60mm, addition pair at Ø110mm, M3 pivot; see --b-diameter,
 --addition-diameter, --pivot-mm.
+
+## 3D print
+
+`generator/printfiles.py` turns the same primitives into OpenSCAD solids for a
+Bambu-class printer, one body plus one inlay per coloured face:
+
+```
+python3 volvelles/generator/printfiles.py                       # addition pair, 1:1
+python3 volvelles/generator/printfiles.py --parts family-b --b-mm 205
+```
+
+At 1:1 the addition stator is Ø189.1mm and the rotor Ø204.6mm. Family B scales
+so its stator is Ø205mm, which puts every one of those parts at 203-207mm
+across. Both fit the P1S plate (256mm) with room for a brim. Needs OpenSCAD on
+PATH (apt, or an AppImage) and Inkscape, which converts the text to paths.
+
+Each part lands in `out/3d/` as:
+
+- `<part>-body.stl` the disc, pivot hole, window cutouts and recessed artwork
+- `<part>-inlay.stl` the artwork, flush with the top face
+
+The fusion/translation stator is printed on both faces, so it also gets a
+`<part>-inlay-back.stl`; that face is mirrored to read correctly once the wheel
+is flipped. Import the STLs without moving them and give the body and each
+inlay different filaments (AMS). The inlays fill their recesses, so the colours
+print flush in one solid. `--mode raised` lifts the inlay onto the top face
+instead; `--mode engrave` leaves it out for a single-colour print.
+
+The recess, line widths and font stems are sized for a 0.4mm nozzle. If the
+slicer dislikes two objects sharing a wall, add a hair of clearance with
+`--inlay-gap 0.1`.
+
+Text goes through Inkscape before OpenSCAD sees it. The addition stator carries
+1024 spiral glyphs, so its body boolean runs about twenty minutes and its STLs
+are around 38MB; the fusion stator runs about ten. `verify_addition()` and the
+family-B rim checks run first, so the printed glyphs are the reviewed ones.
+
+Assembly: an M4 countersunk screw passes through the rotor and stator into a
+nut under the bottom disc. A printed hub ring around the pivot sets each 0.5mm
+face gap, so the rotors clear the artwork. The single-disc tools (addition,
+recovery) recess the nut in a shallow hex pocket on the underside; on the
+fusion/translation stack the nut sits below the flipped rotor, so that stator
+carries hubs on both faces and no nut pocket, and the flipped rotor is printed
+without a countersink. A jam nut fits the pocket flush; a standard nut stands
+proud unless the stator is thicker (`--thickness`). `printfiles.py --help` has
+the rest.
