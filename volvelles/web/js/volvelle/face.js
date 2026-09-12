@@ -203,6 +203,13 @@ export function holeLoops(items, { shape, pivotR, includeWindows = true }) {
 const FONT_LETTER = '700 {SIZE}px "CX Mono", "DejaVu Sans Mono", "SFMono-Regular", Menlo, Consolas, monospace';
 const FONT_SYMBOL = '700 {SIZE}px "CX Symbols", "DejaVu Sans", "Segoe UI Symbol", "Noto Sans Symbols 2", system-ui, sans-serif';
 
+// The source sizes glyphs for Courier (cap height 0.56 em).  The embedded
+// DejaVu faces are much taller (0.73 em), so scale them back to the paper's cap
+// height; letters keep their advance (DejaVu Mono 0.602 em ~ Courier 0.6 em) and
+// are squished vertically, symbols scale uniformly as in emit_svg.py.
+const PS_CAP = 0.56;
+const FONT_CAP = 0.73;
+
 // Render one face into a canvas.  `extent` is the half-width, in page units,
 // that the canvas covers; the canvas is square.
 export function renderFace(items, { extent, size = 2048, ink = "#e6b24c", board = "#08090b" }) {
@@ -226,7 +233,7 @@ export function renderFace(items, { extent, size = 2048, ink = "#e6b24c", board 
   ctx.strokeStyle = ink;
   ctx.fillStyle = ink;
   ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
+  ctx.textBaseline = "alphabetic";
 
   for (const it of items) {
     if (it.kind === "circle") {
@@ -258,13 +265,16 @@ export function renderFace(items, { extent, size = 2048, ink = "#e6b24c", board 
       const px = toX(it.x);
       const py = toY(it.y);
       const fontSize = it.size * s;
+      const scale = PS_CAP / FONT_CAP;
       ctx.save();
       ctx.translate(px, py);
       ctx.rotate(-it.angle * D2R);
+      ctx.scale(it.symbol ? scale : 1, scale);
       ctx.font = it.symbol
         ? FONT_SYMBOL.replace("{SIZE}", fontSize.toFixed(2))
         : FONT_LETTER.replace("{SIZE}", fontSize.toFixed(2));
-      ctx.fillText(it.s, 0, 0);
+      // The item position is the cap centre; drop the baseline half a cap below.
+      ctx.fillText(it.s, 0, (FONT_CAP * fontSize) / 2);
       ctx.restore();
     }
   }
