@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>codex32 volvelles — interactive paper computers</title>
+  <meta name="description" content="Spin the codex32 volvelles in 3D and work through the checksum, split, and recovery worksheets." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%230a0b0d'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle' fill='%23e6b24c'%3E%E2%8A%95%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+<body>
+  <header class="site-head">
+    <div class="brand">
+      <span class="mark" aria-hidden="true">⊕</span>
+      <div>
+        <h1>codex32 volvelles</h1>
+        <p>paper computers for checksums and Shamir shares</p>
+      </div>
+    </div>
+    <nav class="tabs" id="tabs" aria-label="Sections">
+      <button class="tab" data-tab="explore" type="button">Explore</button>
+      <button class="tab" data-tab="learn" type="button">Learn</button>
+      <button class="tab" data-tab="checksum" type="button">Checksum</button>
+      <button class="tab" data-tab="dice" type="button">Dice</button>
+      <button class="tab" data-tab="split" type="button">Split</button>
+      <button class="tab" data-tab="recover" type="button">Recover</button>
+    </nav>
+  </header>
+
+  <main id="tab-content"></main>
+
+  <footer class="site-foot">
+    <p>
+      An educational companion to the <a href="https://secretcodex32.com" rel="noreferrer">codex32</a> paper computers.
+      Not a wallet · no network access · all arithmetic runs locally.
+    </p>
+    <p class="muted small">
+      Data parsed from the canonical SSS32 PostScript and cross-checked against the rust-codex32 reference.
+    </p>
+  </footer>
+
+  <noscript><p class="error">This app needs JavaScript and WebGL for the 3D volvelles.</p></noscript>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

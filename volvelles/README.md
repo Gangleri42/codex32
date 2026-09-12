@@ -6,17 +6,36 @@ matching mask openings). What the booklet does with scissors, X-Acto cuts and
 folded discs, a board house does with routed windows and native double-sided
 copper.
 
+## Web app
+
+`web/` is a zero-build static app: the same volvelles as interactive 3D discs,
+plus the checksum, dice, split and recovery worksheets. It reads the data
+`generator/webdata.py` emits from `SSS32.ps`, so no glyph or table is retyped.
+Serve the folder and open it:
+
+```
+cd volvelles/web && python3 -m http.server 8137      # then browse to :8137
+```
+
+Everything runs locally. `python3 volvelles/generator/webdata.py` refreshes the
+data module, `python3 volvelles/generator/webfonts.py` rebuilds the embedded
+glyph fonts (needs fonttools), and `node volvelles/web/test/run.js` checks the
+field and codex32 arithmetic against the rust-codex32 vectors.
+
 ## Layout
 
 - `generator/` — Python port of the wheel-drawing procedures, plus the fab
   and laser emitters. The boards need nothing but Python; the other two
   shell out to KiCad and Inkscape.
+- `web/` — the browser app, with its own vendored three.js build and subset
+  glyph fonts.
 - `out/` — where the boards, previews and proof table land. Generated,
   ignored, never edited by hand.
 
-Nothing is vendored. The arrays come out of the repo's own `SSS32.ps` and the
-GF(32) cross-check reads `reference/rust-codex32/src/gf32.rs`, so the boards
-track the source they claim to encode.
+Nothing is vendored except the web app's three.js build and its glyph fonts.
+The arrays come out of the repo's own `SSS32.ps` and the GF(32) cross-check
+reads `reference/rust-codex32/src/gf32.rs`, so the boards track the source they
+claim to encode.
 
 ## Regenerate
 

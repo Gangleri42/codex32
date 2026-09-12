@@ -1,0 +1,10 @@
+{
+  "name": "codex32-volvelles-web",
+  "private": true,
+  "type": "module",
+  "description": "Zero-build web app for the codex32 volvelles. No runtime dependencies; no build step.",
+  "scripts": {
+    "test": "node test/run.js",
+    "serve": "python3 -m http.server 8137"
+  }
+}
