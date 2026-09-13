@@ -13,6 +13,17 @@
   <link rel="stylesheet" href="css/app.css" />
 </head>
 <body>
+  <div class="notice" id="notice" hidden>
+    <p>
+      This is an educational tool, not a wallet. The paper booklet is the canonical source;
+      learn the wheels here, but do not rely on this page to protect real funds.
+    </p>
+    <a class="notice-link" href="https://github.com/Gangleri42/codex32/releases/latest" rel="noreferrer">
+      Build it: PCB, laser and 3D-print files</a
+    >
+    <button type="button" class="notice-close" aria-label="Dismiss notice">&#215;</button>
+  </div>
+
   <header class="site-head">
     <div class="brand">
       <span class="mark" aria-hidden="true">⊕</span>
@@ -42,6 +53,10 @@
     <p>
       An educational companion to the <a href="https://secretcodex32.com" rel="noreferrer">codex32</a> paper computers.
       Not a wallet · no network access · all arithmetic runs locally.
+    </p>
+    <p>
+      Make the physical wheels:
+      <a href="https://github.com/Gangleri42/codex32/releases/latest" rel="noreferrer">PCB, laser and 3D-print files</a>.
     </p>
     <p class="muted small">
       Data parsed from the canonical SSS32 PostScript and cross-checked against the rust-codex32 reference.

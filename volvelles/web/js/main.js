@@ -98,6 +98,27 @@ function paintCast(value) {
 onCastChange(paintCast);
 paintCast(getCast());
 
+// Educational-tool notice, dismissed once and remembered.
+const NOTICE_KEY = "codex32-volvelles.notice.v1";
+const notice = document.getElementById("notice");
+if (notice) {
+  let dismissed = false;
+  try {
+    dismissed = localStorage.getItem(NOTICE_KEY) === "dismissed";
+  } catch {
+    /* storage unavailable */
+  }
+  notice.hidden = dismissed;
+  notice.querySelector(".notice-close")?.addEventListener("click", () => {
+    notice.hidden = true;
+    try {
+      localStorage.setItem(NOTICE_KEY, "dismissed");
+    } catch {
+      /* storage unavailable */
+    }
+  });
+}
+
 const initial = TABS.find((t) => t.id === location.hash.slice(1)) ? location.hash.slice(1) : "bench";
 applyTint();
 activate(initial);

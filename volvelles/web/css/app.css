@@ -113,6 +113,23 @@ code { font-family: var(--mono); }
 .error { color: var(--bad); }
 .plus { color: var(--muted); padding: 0 .25rem; }
 
+/* Educational-tool notice, dismissible */
+.notice {
+  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+  padding: .6rem clamp(1rem, 2.2vw, 2.4rem);
+  background: var(--surface-2); color: var(--ink);
+  border-bottom: 1px solid var(--line); font-size: .85rem;
+}
+.notice[hidden] { display: none; }
+.notice p { margin: 0; flex: 1 1 26rem; }
+.notice-link { color: var(--ink); white-space: nowrap; }
+.notice-close {
+  appearance: none; border: 1px solid var(--line); background: transparent; color: var(--muted);
+  border-radius: 999px; width: 1.7rem; height: 1.7rem; padding: 0; font-size: 1.05rem; line-height: 1;
+  cursor: pointer; display: grid; place-items: center;
+}
+.notice-close:hover { color: var(--ink); border-color: var(--line-strong); }
+
 .site-head {
   position: sticky;
   top: 0;
