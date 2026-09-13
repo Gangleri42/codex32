@@ -3,6 +3,8 @@
 import assert from "node:assert/strict";
 import * as gf from "../js/gf32.js";
 import * as c32 from "../js/codex32.js";
+import * as ladder from "../js/worksheets/ladder.js";
+import * as errs from "../js/errors.js";
 
 let passed = 0;
 const test = (name, fn) => {
@@ -158,6 +160,67 @@ test("k=3: derive shares, then recover from any three", () => {
   assert.equal(c32.recoverSecret([seeds[0], seeds[1], extras[1]]), s);
   assert.equal(c32.recoverSecret([seeds[0], extras[1], extras[2]]), s);
   assert.throws(() => c32.recoverSecret([seeds[0], seeds[0], seeds[1]]), /repeated/);
+});
+
+test("checksum worksheet: initial residue and layout", () => {
+  assert.equal(ladder.INITIAL_RESIDUE.map((v) => gf.toChar(v, true)).join(""), "33XW87RR3YLJG");
+  const layout = ladder.ladderLayout(48);
+  assert.equal(layout.cells.length, 490);
+  assert.equal(layout.rows, 35);
+  assert.equal(layout.numSteps, 16);
+  assert.equal(layout.topDiagonal.length, 45);
+});
+
+test("checksum worksheet: vector 2 share A verifies", () => {
+  const share = "MS12NAMEA320ZYXWVUTSRQPNMLKJHGFEDCAXRPP870HKKQRM";
+  const layout = ladder.ladderLayout(48);
+  const chars = [...share.slice(3)].map(gf.feFromChar);
+  const values = ladder.fill(layout, chars);
+  assert.equal(ladder.lastRow(layout, values).map((v) => gf.toChar(v, true)).join(""), "SECRETSHARE32");
+  assert.equal(ladder.isComplete(layout, values), true);
+});
+
+test("checksum worksheet: generation reproduces the checksum", () => {
+  const share = "MS12NAMEA320ZYXWVUTSRQPNMLKJHGFEDCAXRPP870HKKQRM";
+  const layout = ladder.ladderLayout(48);
+  const data = [...share.slice(3, 35)].map(gf.feFromChar);
+  const { checksum } = ladder.solvePink(layout, data);
+  assert.equal(checksum.map((v) => gf.toChar(v, true)).join(""), share.slice(35));
+});
+
+test("checksum worksheet: names the column of a planted error", () => {
+  const share = "MS12NAMEA320ZYXWVUTSRQPNMLKJHGFEDCAXRPP870HKKQRM";
+  const layout = ladder.ladderLayout(48);
+  const good = ladder.fill(layout, [...share.slice(3)].map(gf.feFromChar));
+  const badChars = [...share.slice(3)];
+  badChars[10] = badChars[10] === "A" ? "C" : "A";
+  const bad = ladder.fill(layout, badChars.map(gf.feFromChar));
+  const d = ladder.diagnose(layout, good, bad);
+  assert.ok(d, "an error is found");
+  assert.equal(d.cellId, layout.positionToCell(10));
+});
+
+test("error correction: syndrome, single, double and erasure", () => {
+  const good = "MS12NAMEA320ZYXWVUTSRQPNMLKJHGFEDCAXRPP870HKKQRM";
+  const body = [...good.slice(3)].map(gf.feFromChar);
+  assert.equal(errs.syndrome(body).every((v) => v === 0), true);
+
+  const one = [...good];
+  one[10] = one[10] === "A" ? "C" : "A";
+  const single = errs.correct(one.join(""), { maxSubstitutions: 1 });
+  assert.equal(single[0].corrected, good);
+  assert.deepEqual(single[0].edits.map((e) => e.pos), [7]);
+
+  const two = [...good];
+  two[8] = "A";
+  two[30] = "C";
+  const double = errs.correct(two.join(""), { maxSubstitutions: 2 });
+  assert.equal(double.some((c) => c.corrected === good), true);
+
+  const erased = good.slice(0, 10) + "?" + good.slice(11);
+  const solved = errs.correct(erased, { maxSubstitutions: 1 });
+  assert.equal(solved[0].corrected, good);
+  assert.equal(solved[0].edits[0].kind, "erasure");
 });
 
 console.log(`\n${passed} tests passed`);

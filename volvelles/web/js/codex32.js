@@ -76,6 +76,33 @@ const kindFor = (length) => (checksumLengthFor(length) === LONG_LEN ? "long" : "
 
 export { kindFor as checksumKindFor };
 
+// The short generator polynomial, as used by the checksum worksheet.
+export const shortGenerator = () => [...defs.short.generator];
+
+// The pre-printed row 1 of the checksum worksheet: the residue of the hrp plus
+// a full 13-symbol checksum of zeros (33XW87RR3YLJG for "ms").
+export function initialWorksheetResidue(hrp = "ms") {
+  const engine = new Engine("short");
+  engine.inputHrp(hrp);
+  for (let i = 0; i < defs.short.generator.length; i++) engine.inputFe(0);
+  return [...engine.residue];
+}
+
+// The 13-symbol checksum word for hrp + data (the ladder's generation step).
+export function checksumOf(hrp, data, variant = "short") {
+  const engine = new Engine(variant);
+  engine.inputHrp(hrp);
+  for (const v of data) engine.inputFe(v);
+  engine.inputOwnTarget();
+  return [...engine.residue];
+}
+
+// Strip spaces/dashes and upper-case, the way the wallet guidance says a share
+// may be read aloud.  Mixed case is left for the verifier to reject.
+export function normalizeInput(s) {
+  return String(s).replace(/[\s-]+/g, "").toUpperCase();
+}
+
 export function splitSeparator(s) {
   const i = s.lastIndexOf("1");
   if (i === -1) return { hrp: "", data: s };

@@ -212,7 +212,7 @@ const FONT_CAP = 0.73;
 
 // Render one face into a canvas.  `extent` is the half-width, in page units,
 // that the canvas covers; the canvas is square.
-export function renderFace(items, { extent, size = 2048, ink = "#e6b24c", board = "#08090b" }) {
+export function renderFace(items, { extent, size = 2048, ink = "#141414", board = "#f2f2f0" }) {
   const canvas = document.createElement("canvas");
   canvas.width = canvas.height = size;
   const ctx = canvas.getContext("2d");
@@ -222,10 +222,7 @@ export function renderFace(items, { extent, size = 2048, ink = "#e6b24c", board 
   const toY = (y) => c - y * s;
 
   ctx.clearRect(0, 0, size, size);
-  const vignette = ctx.createRadialGradient(c, c * 0.9, size * 0.05, c, c, size * 0.72);
-  vignette.addColorStop(0, "#11141b");
-  vignette.addColorStop(1, board);
-  ctx.fillStyle = vignette;
+  ctx.fillStyle = board;
   ctx.fillRect(0, 0, size, size);
 
   ctx.lineJoin = "round";

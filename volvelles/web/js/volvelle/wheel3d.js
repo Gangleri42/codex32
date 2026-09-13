@@ -52,7 +52,7 @@ function texturedFace(shape, extent, canvas, z) {
   return mesh;
 }
 
-function bodyMesh(shape, thickness) {
+function bodyMesh(shape, thickness, color) {
   const geometry = new THREE.ExtrudeGeometry(shape, {
     depth: thickness,
     bevelEnabled: false,
@@ -60,28 +60,30 @@ function bodyMesh(shape, thickness) {
   });
   geometry.translate(0, 0, -thickness / 2);
   const material = new THREE.MeshStandardMaterial({
-    color: 0x0a0b0d,
+    color,
     roughness: 0.72,
     metalness: 0.2,
   });
   return new THREE.Mesh(geometry, material);
 }
 
-function edgeLoop(points, z) {
+function edgeLoop(points, z, color) {
   const geometry = new THREE.BufferGeometry().setFromPoints(
     points.map(([x, y]) => new THREE.Vector3(x, y, z)),
   );
-  const material = new THREE.LineBasicMaterial({ color: 0x8a6f34, transparent: true, opacity: 0.8 });
+  const material = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.8 });
   return new THREE.LineLoop(geometry, material);
 }
 
-const BOARD = "#08090b";
-const INK = "#e6b24c";
+const DEFAULT_PALETTE = { ink: "#141414", board: "#f2f2f0", plateEdge: "#8a8a86", stage: "#e7e7e4" };
+const DEFAULT_TINT = { hue: 38, sat: 0.5, amount: 0.16 };
 
 export class Volvelle3D {
-  constructor(container, data) {
+  constructor(container, data, options = {}) {
     this.container = container;
     this.data = data;
+    this.palette = options.palette ?? DEFAULT_PALETTE;
+    this.tint = options.tint ?? DEFAULT_TINT;
     this.built = new Map();
     this.snap = true;
     this.onSettingChange = () => {};
@@ -106,13 +108,13 @@ export class Volvelle3D {
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     container.appendChild(this.renderer.domElement);
 
-    this.scene.add(new THREE.HemisphereLight(0xfff4d6, 0x101018, 1.1));
-    const key = new THREE.DirectionalLight(0xfff0cc, 1.5);
-    key.position.set(-400, -300, 800);
-    this.scene.add(key);
-    const rim = new THREE.DirectionalLight(0x88aaff, 0.5);
-    rim.position.set(500, 400, 300);
-    this.scene.add(rim);
+    this.hemi = new THREE.HemisphereLight(0xffffff, 0x000000, 1.1);
+    this.key = new THREE.DirectionalLight(0xffffff, 1.35);
+    this.key.position.set(-400, -300, 800);
+    this.rim = new THREE.DirectionalLight(0xffffff, 0.45);
+    this.rim.position.set(500, 400, 300);
+    this.scene.add(this.hemi, this.key, this.rim);
+    this._applyTint();
 
     this.root = new THREE.Group();
     this.scene.add(this.root);
@@ -241,12 +243,14 @@ export class Volvelle3D {
   }
 
   _snap() {
+    if (!this.instrument) return;
     const step = this.instrument.stepAngle * D2R;
     this.setSetting(Math.round(this.spin / step));
   }
 
   _emitSetting(snapped) {
     const inst = this.instrument;
+    if (!inst) return;
     const raw = this.spin / (inst.stepAngle * D2R);
     const index = ((Math.round(raw) % inst.steps) + inst.steps) % inst.steps;
     this.onSettingChange({ index, exact: snapped === true });
@@ -329,11 +333,11 @@ export class Volvelle3D {
     const statorShape = shapeFrom(statorPts,
       holeLoops(cfg.stator.items, { pivotR: this._pivotR(), includeWindows: false }));
     const stator = new THREE.Group();
-    stator.add(bodyMesh(statorShape, cfg.thickness));
+    stator.add(bodyMesh(statorShape, cfg.thickness, this.palette.board));
     stator.add(texturedFace(statorShape, cfg.stator.extent, renderFace(cfg.stator.items, {
-      extent: cfg.stator.extent, size: cfg.stator.size, ink: INK, board: BOARD,
+      extent: cfg.stator.extent, size: cfg.stator.size, ink: this.palette.ink, board: this.palette.board,
     }), cfg.thickness / 2 + cfg.thickness * 0.02));
-    stator.add(edgeLoop(statorPts, cfg.thickness / 2 + cfg.thickness * 0.03));
+    stator.add(edgeLoop(statorPts, cfg.thickness / 2 + cfg.thickness * 0.03, this.palette.plateEdge));
     group.add(stator);
 
     const rotorPts = outlinePoints(cfg.rotor.shape, this.data);
@@ -341,11 +345,11 @@ export class Volvelle3D {
       holeLoops(cfg.rotor.items, { pivotR: this._pivotR(), includeWindows: true }));
     const rotor = new THREE.Group();
     rotor.position.z = cfg.thickness + cfg.gap;
-    rotor.add(bodyMesh(rotorShape, cfg.thickness));
+    rotor.add(bodyMesh(rotorShape, cfg.thickness, this.palette.board));
     rotor.add(texturedFace(rotorShape, cfg.rotor.extent, renderFace(cfg.rotor.items, {
-      extent: cfg.rotor.extent, size: cfg.rotor.size, ink: INK, board: BOARD,
+      extent: cfg.rotor.extent, size: cfg.rotor.size, ink: this.palette.ink, board: this.palette.board,
     }), cfg.thickness / 2 + cfg.thickness * 0.02));
-    rotor.add(edgeLoop(rotorPts, cfg.thickness / 2 + cfg.thickness * 0.03));
+    rotor.add(edgeLoop(rotorPts, cfg.thickness / 2 + cfg.thickness * 0.03, this.palette.plateEdge));
     group.add(rotor);
 
     this.root.add(group);
@@ -365,6 +369,7 @@ export class Volvelle3D {
   }
 
   setSetting(index) {
+    if (!this.instrument) return;
     const inst = this.instrument;
     const i = ((index % inst.steps) + inst.steps) % inst.steps;
     this._applySpin(i * inst.stepAngle * D2R);
@@ -376,13 +381,27 @@ export class Volvelle3D {
     if (on) this._snap();
   }
 
-  addHighlight(local, color = 0xffd479, r = 10) {
+  addHighlight(local, color = 0x808080, r = 10) {
     const ring = new THREE.Mesh(
       new THREE.RingGeometry(r * 0.72, r, 40),
       new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, transparent: true, opacity: 0.9 }),
     );
     ring.position.set(local[0], local[1], 0.4);
     return ring;
+  }
+
+  _applyTint() {
+    const hue = this.tint.hue / 360;
+    const sat = this.tint.sat;
+    this.hemi.color.setHSL(hue, sat * 0.4, 0.72);
+    this.hemi.groundColor.setHSL(hue, sat * 0.3, 0.07);
+    this.key.color.setHSL(hue, sat * 0.5, 0.84);
+    this.rim.color.setHSL((hue + 0.5) % 1, sat * 0.22, 0.6);
+  }
+
+  setTint(tint) {
+    this.tint = { ...this.tint, ...tint };
+    this._applyTint();
   }
 
   dispose() {

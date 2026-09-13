@@ -3,9 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
   <title>codex32 volvelles — interactive paper computers</title>
   <meta name="description" content="Spin the codex32 volvelles in 3D and work through the checksum, split, and recovery worksheets." />
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%230a0b0d'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle' fill='%23e6b24c'%3E%E2%8A%95%3C/text%3E%3C/svg%3E" />
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f3f3f1" />
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f0f0f" />
+  <link rel="icon" media="(prefers-color-scheme: light)" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23f3f3f1' stroke='%23141414' stroke-width='1.5'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle' fill='%23141414'%3E%E2%8A%95%3C/text%3E%3C/svg%3E" />
+  <link rel="icon" media="(prefers-color-scheme: dark)" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%230f0f0f' stroke='%23ececec' stroke-width='1.5'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle' fill='%23ececec'%3E%E2%8A%95%3C/text%3E%3C/svg%3E" />
   <link rel="stylesheet" href="css/app.css" />
 </head>
 <body>
@@ -18,12 +22,14 @@
       </div>
     </div>
     <nav class="tabs" id="tabs" aria-label="Sections">
+      <button class="tab" data-tab="bench" type="button">Bench</button>
       <button class="tab" data-tab="explore" type="button">Explore</button>
       <button class="tab" data-tab="learn" type="button">Learn</button>
       <button class="tab" data-tab="checksum" type="button">Checksum</button>
       <button class="tab" data-tab="dice" type="button">Dice</button>
       <button class="tab" data-tab="split" type="button">Split</button>
       <button class="tab" data-tab="recover" type="button">Recover</button>
+      <button class="tab" data-tab="inspector" type="button">Inspector</button>
     </nav>
   </header>
 
@@ -39,7 +45,7 @@
     </p>
   </footer>
 
-  <noscript><p class="error">This app needs JavaScript and WebGL for the 3D volvelles.</p></noscript>
+  <noscript><p class="error">This app needs JavaScript. The 3D Explore tab also needs WebGL; the Bench and worksheets do not.</p></noscript>
   <script type="module" src="js/main.js"></script>
 </body>
 </html>

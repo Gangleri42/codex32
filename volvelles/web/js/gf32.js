@@ -82,3 +82,15 @@ export const charToValue = (c) => {
 };
 
 export const valueToChar = (v) => CHARS[v & 31];
+
+// Null-returning variant for input validation (accepts either case), and the
+// case-controlled inverse.  Used by the worksheet and inspector.
+export const feFromChar = (c) => {
+  const v = CHARS_INV.get(typeof c === "string" ? c : "");
+  return v === undefined ? null : v;
+};
+
+export const toChar = (v, upper = false) => {
+  const c = CHARS[v & 31];
+  return upper ? c.toUpperCase() : c;
+};
