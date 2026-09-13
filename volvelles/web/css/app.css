@@ -411,6 +411,11 @@ button:active { transform: translateY(1px); }
 .bench-wheel:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
 .bench-wheel:active { cursor: grabbing; }
 .bench-wheel svg { display: block; width: 100%; height: 100%; }
+.bench-wheel .stator { transform-box: view-box; transform-origin: center; transition: transform .18s cubic-bezier(.2, .7, .2, 1); }
+.bench-wheel.dragging .stator { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  .bench-wheel .stator { transition: none; }
+}
 .bench-readout { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: .7rem; }
 .window-list { list-style: none; margin: .4rem 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(4.6rem, 1fr)); gap: .15rem; font-family: var(--mono); font-size: .82rem; max-height: 240px; overflow: auto; }
 .window-list li { display: flex; align-items: center; gap: .25rem; padding: .1rem .3rem; border-radius: 5px; }

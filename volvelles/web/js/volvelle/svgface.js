@@ -126,9 +126,3 @@ export function instrumentSvg(data, name, { size = 900, palette } = {}) {
     `</svg>`
   );
 }
-
-export function setStatorRotation(svg, detent, stepDeg, size = 900) {
-  const group = svg.querySelector(".stator");
-  if (!group) return;
-  group.setAttribute("transform", `rotate(${n(detent * stepDeg)} ${size / 2} ${size / 2})`);
-}

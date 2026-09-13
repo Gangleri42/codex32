@@ -8,7 +8,7 @@ import { checksumOf } from "./codex32.js";
 import { el, toast } from "./ui.js";
 import { fill, ladderLayout, operands } from "./worksheets/ladder.js";
 import { buildLadderGrid } from "./worksheets/ladder-grid.js";
-import { instrumentConfig, instrumentSvg, setStatorRotation } from "./volvelle/svgface.js";
+import { instrumentConfig, instrumentSvg } from "./volvelle/svgface.js";
 import { onThemeChange, palette } from "./theme.js";
 
 const INSTRUMENTS = [
@@ -37,7 +37,7 @@ function dialFor(name, value) {
 
 export function mountBench(root, ctx) {
   const layout = ladderLayout(48);
-  const state = { instrument: "addition", detent: 0, mode: "verify", entries: {}, activeCell: null };
+  const state = { instrument: "addition", detent: 0, liveAngle: null, mode: "verify", entries: {}, activeCell: null };
 
   const wheelHost = el("div", { class: "bench-wheel", role: "slider", tabindex: 0 });
   const readout = el("div", { class: "bench-readout" });
@@ -79,18 +79,28 @@ export function mountBench(root, ctx) {
 
   function renderWheel() {
     wheelHost.innerHTML = instrumentSvg(data, state.instrument, { size: SVG_SIZE, palette: palette() });
-    const svg = wheelHost.firstElementChild;
-    setStatorRotation(svg, state.detent, config().stepDeg, SVG_SIZE);
+    applyRotation();
     wheelHost.setAttribute("aria-label", `${state.instrument} wheel`);
     wheelHost.setAttribute("aria-valuemin", "0");
     wheelHost.setAttribute("aria-valuemax", String(config().detents - 1));
     wheelHost.setAttribute("aria-valuenow", String(state.detent));
   }
 
+  // The stator turns by detent*stepDeg; while dragging it follows the pointer
+  // continuously and is snapped on release, like the Explore wheel.
+  function applyRotation() {
+    const group = wheelHost.querySelector(".stator");
+    if (!group) return;
+    const angle = state.liveAngle ?? state.detent * config().stepDeg;
+    group.style.transform = `rotate(${angle}deg)`;
+    wheelHost.setAttribute("aria-valuenow", String(state.detent));
+  }
+
   function setDetent(detent) {
     const steps = config().detents;
     state.detent = ((detent % steps) + steps) % steps;
-    renderWheel();
+    state.liveAngle = null;
+    applyRotation();
     renderReadout();
   }
 
@@ -101,16 +111,22 @@ export function mountBench(root, ctx) {
 
   let drag = null;
   wheelHost.addEventListener("pointerdown", (e) => {
-    drag = { phi0: pointerAngle(e), d0: state.detent };
+    drag = { phi0: pointerAngle(e), start: state.detent * config().stepDeg };
+    state.liveAngle = drag.start;
+    wheelHost.classList.add("dragging");
     wheelHost.setPointerCapture(e.pointerId);
   });
   wheelHost.addEventListener("pointermove", (e) => {
     if (!drag) return;
-    setDetent(Math.round(drag.d0 + wrap180(pointerAngle(e) - drag.phi0) / config().stepDeg));
+    state.liveAngle = drag.start + wrap180(pointerAngle(e) - drag.phi0);
+    applyRotation();
   });
   const endDrag = (e) => {
     if (!drag) return;
     drag = null;
+    wheelHost.classList.remove("dragging");
+    const step = config().stepDeg;
+    setDetent(Math.round((state.liveAngle ?? 0) / step));
     try {
       wheelHost.releasePointerCapture(e.pointerId);
     } catch {
