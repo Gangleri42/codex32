@@ -2,7 +2,7 @@
 // DOM, no framework; bench.js owns the state and calls update() after changes.
 
 import { feFromChar, toChar } from "../gf32.js";
-import { SHEET_HEIGHT_PT, SHEET_WIDTH_PT, cellX, cellY } from "./ladder.js";
+import { cellX, cellY } from "./ladder.js";
 import { el } from "../ui.js";
 
 const EDITABLE = new Set(["data", "checksum", "residue", "lookup"]);
@@ -87,7 +87,10 @@ export function buildLadderGrid({ layout, getEntry, getExpected, onInput, onFocu
   grid.addEventListener("paste", (event) => {
     const target = event.target.closest?.("[data-cell]");
     if (!target) return;
-    const text = (event.clipboardData?.getData("text") || "")
+    // A pasted share may carry its `ms1` prefix; the grid holds the body.
+    const raw = (event.clipboardData?.getData("text") || "").trim();
+    const body = raw.replace(/^ms1/i, "");
+    const text = body
       .toUpperCase()
       .replace(/[^A-Z0-9]/g, "")
       .split("")

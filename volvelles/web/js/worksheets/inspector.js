@@ -14,7 +14,7 @@ function errorText(result) {
   return typeof e === "string" ? e : String(e);
 }
 
-export function mountInspector(root, ctx) {
+export function mountInspector(root) {
   const input = el("textarea", { class: "mono", rows: 3, spellcheck: false, autocomplete: "off", autocapitalize: "characters",
     placeholder: "MS1...  ('?' marks a character you cannot read)" });
   const maxSubs = select([{ value: "1", label: "single substitution" }, { value: "2", label: "up to two" }, { value: "3", label: "up to three (slow)" }], "2", () => render());
@@ -29,7 +29,13 @@ export function mountInspector(root, ctx) {
     }
     const result = verify(normalized);
     if (result.ok) {
-      const p = parts(normalized);
+      let p;
+      try {
+        p = parts(normalized);
+      } catch (e) {
+        output.append(el("p", { class: "status bad", text: e.message }));
+        return;
+      }
       const hex = bytesToHex(payloadToBytes(p.payload));
       output.append(
         el("p", { class: "status ok", text: "Valid checksum." }),
@@ -44,7 +50,7 @@ export function mountInspector(root, ctx) {
     }
 
     output.append(el("p", { class: "status bad", text: errorText(result) }));
-    if (normalized.includes("?") || !/^[a-z0-9]+$/.test(normalized)) {
+    if (normalized.includes("?") || !/^[a-z0-9]+$/i.test(normalized)) {
       output.append(el("p", { class: "muted small", text: "Corrections are offered only for a full string of bech32 characters; '?' erasures are solved too." }));
     }
 

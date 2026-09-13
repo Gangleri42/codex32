@@ -5,6 +5,7 @@ import * as gf from "../js/gf32.js";
 import * as c32 from "../js/codex32.js";
 import * as ladder from "../js/worksheets/ladder.js";
 import * as errs from "../js/errors.js";
+import * as turn from "../js/volvelle/turn.js";
 
 let passed = 0;
 const test = (name, fn) => {
@@ -221,6 +222,14 @@ test("error correction: syndrome, single, double and erasure", () => {
   const solved = errs.correct(erased, { maxSubstitutions: 1 });
   assert.equal(solved[0].corrected, good);
   assert.equal(solved[0].edits[0].kind, "erasure");
+});
+
+test("wheel turn: detent, angle and wrap", () => {
+  assert.equal(turn.wrap180(190), -170);
+  assert.equal(turn.wrap180(-190), 170);
+  assert.equal(turn.detentFor(90, -11.25, 32), 24);
+  assert.equal(turn.angleFor(24, -11.25), -270);
+  assert.equal(turn.detentFor(-270, -11.25, 32), 24);
 });
 
 console.log(`\n${passed} tests passed`);

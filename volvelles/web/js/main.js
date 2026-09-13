@@ -88,6 +88,7 @@ try {
 const castHost = document.getElementById("cast-switch");
 const castButtons = {};
 for (const label of ["Warm", "Cold"]) {
+  if (!castHost) break;
   const id = label.toLowerCase();
   castButtons[id] = el("button", { type: "button", text: label, onclick: () => setCast(id) });
   castHost.append(castButtons[id]);

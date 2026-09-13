@@ -117,28 +117,11 @@ export function ladderLayout(shareLen = 48) {
       return ar - br || ac - bc;
     });
 
-  const bottomDiagonal = Array.from({ length: numSteps - 1 }, (_, i) => i + 1).flatMap((s) => [
-    cellId(2 * s, 2 * s + 1),
-    cellId(2 * s, 2 * s + 2),
-  ]);
-
   const verificationOrder = [
     ...topDiagonal,
     ...cells
       .filter((c) => c.kind === "residue" || c.kind === "lookup" || c.kind === "target")
       .sort((a, b) => a.row - b.row || a.col - b.col)
-      .map((c) => c.id),
-  ];
-
-  const generationOrder = [
-    ...topDiagonal.filter((id) => byId.get(id)?.kind === "data"),
-    ...cells
-      .filter((c) => (c.kind === "residue" || c.kind === "lookup") && c.phase === "top-down")
-      .sort((a, b) => a.row - b.row || a.col - b.col)
-      .map((c) => c.id),
-    ...cells
-      .filter((c) => c.phase === "bottom-up")
-      .sort((a, b) => b.row - a.row || b.col - a.col)
       .map((c) => c.id),
   ];
 
@@ -150,10 +133,7 @@ export function ladderLayout(shareLen = 48) {
     return cellId(2 * step, 2 * step + 13 + offset);
   };
 
-  return {
-    shareLen, numSteps, rows, cells, byId, labels, topDiagonal, bottomDiagonal,
-    verificationOrder, generationOrder, positionToCell,
-  };
+  return { shareLen, numSteps, rows, cells, byId, labels, topDiagonal, verificationOrder, positionToCell };
 }
 
 // Fills every derivable cell from the 45 post-MS1 characters.  A null
@@ -192,10 +172,6 @@ export function operands(layout, values, id) {
   return { kind: "given" };
 }
 
-export function checkCell(values, id, entered) {
-  return values.get(id) === entered;
-}
-
 export function lastRow(layout, values) {
   const row = 2 * layout.numSteps + 2;
   return Array.from({ length: 13 }, (_, i) => values.get(cellId(row, layout.shareLen - 13 + i)) ?? null);
@@ -223,24 +199,4 @@ export function diagnose(layout, expected, user) {
     }
   }
   return null;
-}
-
-// The companion's bottom-diagonal trick: a derived share's sheet is the
-// cellwise sum of the input sheets scaled by their derivation symbols.
-export function interpolateCells(sheets, sigma) {
-  const first = sheets[0];
-  const out = new Map();
-  for (const id of first.keys()) {
-    let acc = 0;
-    for (let i = 0; i < sheets.length; i++) {
-      const v = sheets[i].get(id) ?? null;
-      if (v === null) {
-        acc = null;
-        break;
-      }
-      acc = add(acc, mul(sigma[i], v));
-    }
-    out.set(id, acc);
-  }
-  return out;
 }

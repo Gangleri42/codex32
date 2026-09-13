@@ -4,7 +4,7 @@
 import { charToValue, valueToChar } from "./gf32.js";
 import { el, select } from "./ui.js";
 import { Volvelle3D } from "./volvelle/wheel3d.js";
-import { getTint, onThemeChange, onTintChange, palette } from "./theme.js";
+import { getTint, onCastChange, onThemeChange, palette } from "./theme.js";
 
 const INSTRUMENTS = [
   { name: "addition", label: "Addition", blurb: "XOR two characters. Turn the wheel to set the first character, then read the window labelled with the second." },
@@ -150,7 +150,7 @@ export function mountExplore(root, ctx) {
   }
 
   // The warm/cold cast is switched from the header; the 3D just follows it.
-  onTintChange(() => volvelle?.setTint(getTint()));
+  onCastChange(() => volvelle?.setTint(getTint()));
 
   onThemeChange(() => {
     if (!volvelle) return;

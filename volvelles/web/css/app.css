@@ -428,6 +428,8 @@ button:active { transform: translateY(1px); }
 .bench-proposal { margin-top: .8rem; padding-top: .7rem; border-top: 1px solid var(--line); }
 .bench-proposal .reading.ok { color: var(--ok); }
 .bench-proposal .reading.bad { color: var(--bad); }
+.bench-diagnosis { min-height: 1.1rem; margin: .2rem 0 0; }
+.bench-diagnosis:not(:empty) { color: var(--bad); }
 
 /* Checksum ladder grid */
 .sheet-scroll { overflow: auto; max-width: 100%; }

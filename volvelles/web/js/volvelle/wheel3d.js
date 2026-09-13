@@ -7,6 +7,7 @@ import {
   additionRotorItems, additionStatorItems, bRotorItems, bStatorItems,
   circlePoints, holeLoops, outlinePoints, renderFace,
 } from "./face.js";
+import { detentFor } from "./turn.js";
 
 const D2R = Math.PI / 180;
 
@@ -75,7 +76,7 @@ function edgeLoop(points, z, color) {
   return new THREE.LineLoop(geometry, material);
 }
 
-const DEFAULT_PALETTE = { ink: "#141414", board: "#f2f2f0", plateEdge: "#8a8a86", stage: "#e7e7e4" };
+const DEFAULT_PALETTE = { ink: "#2b2b2b", board: "#f4f4f2", plateEdge: "#a6a6a1" };
 const DEFAULT_TINT = { hue: 38, sat: 0.5, amount: 0.16 };
 
 export class Volvelle3D {
@@ -244,16 +245,14 @@ export class Volvelle3D {
 
   _snap() {
     if (!this.instrument) return;
-    const step = this.instrument.stepAngle * D2R;
-    this.setSetting(Math.round(this.spin / step));
+    const inst = this.instrument;
+    this.setSetting(detentFor(this.spin, inst.stepAngle * D2R, inst.steps));
   }
 
   _emitSetting(snapped) {
     const inst = this.instrument;
     if (!inst) return;
-    const raw = this.spin / (inst.stepAngle * D2R);
-    const index = ((Math.round(raw) % inst.steps) + inst.steps) % inst.steps;
-    this.onSettingChange({ index, exact: snapped === true });
+    this.onSettingChange({ index: detentFor(this.spin, inst.stepAngle * D2R, inst.steps), exact: snapped === true });
   }
 
   show(name) {
@@ -381,15 +380,6 @@ export class Volvelle3D {
     if (on) this._snap();
   }
 
-  addHighlight(local, color = 0x808080, r = 10) {
-    const ring = new THREE.Mesh(
-      new THREE.RingGeometry(r * 0.72, r, 40),
-      new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, transparent: true, opacity: 0.9 }),
-    );
-    ring.position.set(local[0], local[1], 0.4);
-    return ring;
-  }
-
   _applyTint() {
     const hue = this.tint.hue / 360;
     const sat = this.tint.sat;
@@ -407,6 +397,15 @@ export class Volvelle3D {
   dispose() {
     cancelAnimationFrame(this._raf);
     this._resizeObserver.disconnect();
+    this.scene.traverse((obj) => {
+      if (obj.geometry) obj.geometry.dispose();
+      const materials = Array.isArray(obj.material) ? obj.material : obj.material ? [obj.material] : [];
+      for (const material of materials) {
+        for (const value of Object.values(material)) if (value && value.isTexture) value.dispose();
+        material.dispose();
+      }
+    });
+    this.built.clear();
     this.renderer.dispose();
   }
 }

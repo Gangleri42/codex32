@@ -6,9 +6,10 @@ import data from "./data.js";
 import { add, charToValue, feFromChar, mul, toChar } from "./gf32.js";
 import { checksumOf } from "./codex32.js";
 import { el, toast } from "./ui.js";
-import { fill, ladderLayout, operands } from "./worksheets/ladder.js";
+import { fill, ladderLayout, operands, diagnose } from "./worksheets/ladder.js";
 import { buildLadderGrid } from "./worksheets/ladder-grid.js";
 import { instrumentConfig, instrumentSvg } from "./volvelle/svgface.js";
+import { angleFor, detentFor, wrap180 } from "./volvelle/turn.js";
 import { onThemeChange, palette } from "./theme.js";
 
 const INSTRUMENTS = [
@@ -19,10 +20,6 @@ const INSTRUMENTS = [
 ];
 
 const SVG_SIZE = 900;
-
-function wrap180(deg) {
-  return ((((deg + 180) % 360) + 360) % 360) - 180;
-}
 
 function dialFor(name, value) {
   const base = data.bases[name];
@@ -35,17 +32,21 @@ function dialFor(name, value) {
   return null;
 }
 
-export function mountBench(root, ctx) {
+export function mountBench(root) {
   const layout = ladderLayout(48);
-  const state = { instrument: "addition", detent: 0, liveAngle: null, mode: "verify", entries: {}, activeCell: null };
+  const state = { instrument: "addition", detent: 0, angle: 0, highlight: null, mode: "verify", entries: {}, activeCell: null };
 
   const wheelHost = el("div", { class: "bench-wheel", role: "slider", tabindex: 0 });
   const readout = el("div", { class: "bench-readout" });
   const proposalBox = el("div", { class: "bench-proposal" });
+  const diagnosisLine = el("p", { class: "bench-diagnosis muted small" });
   const gridHost = el("div", { class: "bench-sheet" });
   const modeInfo = el("span", { class: "muted small", text: "Type each cell; B, I, O and 1 are never bech32." });
 
-  const config = () => instrumentConfig(data, state.instrument);
+  // The geometry (item lists, outlines) is rebuilt only when the instrument
+  // changes, never from the drag loop.
+  let cfg = instrumentConfig(data, state.instrument);
+  const config = () => cfg;
   const getEntry = (id) => state.entries[id];
   const getActiveCell = () => state.activeCell;
 
@@ -86,20 +87,20 @@ export function mountBench(root, ctx) {
     wheelHost.setAttribute("aria-valuenow", String(state.detent));
   }
 
-  // The stator turns by detent*stepDeg; while dragging it follows the pointer
-  // continuously and is snapped on release, like the Explore wheel.
+  // The stator turns by `angle`; drag sets it continuously, release snaps it
+  // to the nearest detent angle (the nearest revolution, so no long spin).
   function applyRotation() {
     const group = wheelHost.querySelector(".stator");
     if (!group) return;
-    const angle = state.liveAngle ?? state.detent * config().stepDeg;
-    group.style.transform = `rotate(${angle}deg)`;
+    group.style.transform = `rotate(${state.angle}deg)`;
     wheelHost.setAttribute("aria-valuenow", String(state.detent));
   }
 
   function setDetent(detent) {
-    const steps = config().detents;
-    state.detent = ((detent % steps) + steps) % steps;
-    state.liveAngle = null;
+    const { stepDeg, detents } = config();
+    state.detent = ((detent % detents) + detents) % detents;
+    const base = angleFor(state.detent, stepDeg);
+    state.angle = base + 360 * Math.round((state.angle - base) / 360);
     applyRotation();
     renderReadout();
   }
@@ -111,22 +112,23 @@ export function mountBench(root, ctx) {
 
   let drag = null;
   wheelHost.addEventListener("pointerdown", (e) => {
-    drag = { phi0: pointerAngle(e), start: state.detent * config().stepDeg };
-    state.liveAngle = drag.start;
+    drag = { lastPhi: pointerAngle(e) };
     wheelHost.classList.add("dragging");
     wheelHost.setPointerCapture(e.pointerId);
   });
   wheelHost.addEventListener("pointermove", (e) => {
     if (!drag) return;
-    state.liveAngle = drag.start + wrap180(pointerAngle(e) - drag.phi0);
+    const phi = pointerAngle(e);
+    state.angle += wrap180(phi - drag.lastPhi);
+    drag.lastPhi = phi;
     applyRotation();
   });
   const endDrag = (e) => {
     if (!drag) return;
     drag = null;
     wheelHost.classList.remove("dragging");
-    const step = config().stepDeg;
-    setDetent(Math.round((state.liveAngle ?? 0) / step));
+    const { stepDeg, detents } = config();
+    setDetent(detentFor(state.angle, stepDeg, detents));
     try {
       wheelHost.releasePointerCapture(e.pointerId);
     } catch {
@@ -170,8 +172,9 @@ export function mountBench(root, ctx) {
       readout.append(el("p", { class: "muted small" }, "Pointer at ", el("strong", { text: pointer })));
       const list = el("ol", { class: "window-list" });
       for (const w of windows) {
+        const on = (proposal && proposal.ring === w.ring) || state.highlight === w.label;
         list.append(el("li", {
-          class: proposal && proposal.ring === w.ring ? "on" : "",
+          class: on ? "on" : "",
           title: `${pointer} ⊕ ${w.label} = ${w.value}`,
         }, el("span", { class: "label", text: w.label }), el("span", { class: "arrow", text: "→" }), el("span", { class: "value", text: w.value })));
       }
@@ -227,7 +230,10 @@ export function mountBench(root, ctx) {
 
   function selectInstrument(name) {
     state.instrument = name;
+    cfg = instrumentConfig(data, name);
     state.detent = 0;
+    state.angle = 0;
+    state.highlight = null;
     for (const [i, button] of [...instrumentBar.children].entries()) button.classList.toggle("active", INSTRUMENTS[i].id === name);
     renderWheel();
     renderReadout();
@@ -280,6 +286,32 @@ export function mountBench(root, ctx) {
   function refresh() {
     grid.update();
     renderReadout();
+    updateDiagnosis();
+  }
+
+  // Name the first cell that diverges: a typed arithmetic cell, or the first
+  // checksum column that does not read SECRETSHARE32.
+  function updateDiagnosis() {
+    const correct = expected();
+    const user = new Map(correct);
+    for (const cell of layout.cells) {
+      if (cell.kind === "target") user.set(cell.id, cell.given);
+      else if (cell.kind === "residue" || cell.kind === "lookup") {
+        const typed = state.entries[cell.id];
+        if (typed) user.set(cell.id, feFromChar(typed));
+      }
+    }
+    const d = diagnose(layout, correct, user);
+    if (!d) {
+      diagnosisLine.textContent = "";
+      return;
+    }
+    const cell = layout.byId.get(d.cellId);
+    if (cell && cell.kind === "target") {
+      diagnosisLine.textContent = `The share fails its checksum: column ${d.col + 1} (character ${cell.charIndex + 1}) should read ${toChar(cell.given, true)}.`;
+    } else {
+      diagnosisLine.textContent = `Arithmetic error at column ${d.col + 1}, row ${d.row + 1}: the worksheet gives ${toChar(correct.get(d.cellId), true)}.`;
+    }
   }
 
   root.append(el("div", { class: "bench" },
@@ -287,6 +319,7 @@ export function mountBench(root, ctx) {
     el("section", { class: "bench-right" },
       el("h2", { text: "Checksum worksheet" }),
       modeBar,
+      diagnosisLine,
       el("div", { class: "sheet-scroll" }, gridHost),
       proposalBox)));
 
@@ -296,17 +329,18 @@ export function mountBench(root, ctx) {
   return {
     show(name, a, b) {
       selectInstrument(name);
-      if (name === "addition") {
-        if (a != null) {
-          const dial = data.addition.rim.indexOf(String(a).toUpperCase());
-          if (dial >= 0) state.detent = dial;
-        }
-      } else if (a != null) {
+      state.highlight = name === "addition" && b != null ? String(b).toUpperCase() : null;
+      if (name === "addition" && a != null) {
+        const dial = data.addition.rim.indexOf(String(a).toUpperCase());
+        if (dial >= 0) setDetent(dial);
+        else renderReadout();
+      } else if (name !== "addition" && a != null) {
         const dial = dialFor(name, charToValue(String(a).toUpperCase()));
-        if (dial !== null) state.detent = dial;
+        if (dial !== null) setDetent(dial);
+        else renderReadout();
+      } else {
+        renderReadout();
       }
-      renderWheel();
-      renderReadout();
     },
     setDetent,
     setInstrument: selectInstrument,

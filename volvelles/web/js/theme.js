@@ -6,28 +6,20 @@
 const CAST_KEY = "codex32-volvelles.cast.v1";
 
 // Palette for the SVG and three.js assets.  The UI itself uses the CSS tokens.
-export const palettes = {
+const palettes = {
   light: {
     ink: "#2b2b2b",
-    muted: "#656565",
     plate: "#f4f4f2",
     plateTop: "#fafaf8",
     plateEdge: "#a6a6a1",
-    stage: "#e3e3e0",
     board: "#f4f4f2",
-    boardTop: "#fafaf8",
-    edge: "#3a3a3a",
   },
   dark: {
     ink: "#c9c9c9",
-    muted: "#8f8f8f",
     plate: "#1d1d1d",
     plateTop: "#242424",
     plateEdge: "#4a4a4a",
-    stage: "#1c1c1c",
     board: "#1d1d1d",
-    boardTop: "#242424",
-    edge: "#101010",
   },
 };
 
@@ -92,8 +84,6 @@ export function onCastChange(callback) {
   castListeners.add(callback);
   return () => castListeners.delete(callback);
 }
-
-export const onTintChange = onCastChange;
 
 export function applyTint() {
   const { hue, sat, amount } = CASTS[cast];

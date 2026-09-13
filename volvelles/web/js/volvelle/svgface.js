@@ -9,7 +9,6 @@ import {
   circlePoints, holeLoops, outlinePoints,
 } from "./face.js";
 
-const D2R = Math.PI / 180;
 const PS_CAP = 0.56;
 const FONT_CAP = 0.73;
 
