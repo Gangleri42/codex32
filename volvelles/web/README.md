@@ -65,10 +65,10 @@ test/run.js         reference-vector tests for the math
 
 ## Theme
 
-Greyscale e-ink, following the system light/dark setting
+Greyscale e-ink with soft contrast, following the system light/dark setting
 (`prefers-color-scheme`) across the UI, the SVG wheels and the 3D scene. No
-gradients. The Explore tab's colour wheel tints the whole app (paper and canvas
-alike) and is remembered; the default is a subtle warm.
+gradients. A warm/cold switch in the header tints the whole app (paper and
+canvas alike) and is remembered; the default is warm.
 
 ## Regenerate and test
 

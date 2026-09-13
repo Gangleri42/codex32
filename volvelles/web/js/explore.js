@@ -4,7 +4,7 @@
 import { charToValue, valueToChar } from "./gf32.js";
 import { el, select } from "./ui.js";
 import { Volvelle3D } from "./volvelle/wheel3d.js";
-import { getTint, onThemeChange, onTintChange, palette, setTint, tintColor } from "./theme.js";
+import { getTint, onThemeChange, onTintChange, palette } from "./theme.js";
 
 const INSTRUMENTS = [
   { name: "addition", label: "Addition", blurb: "XOR two characters. Turn the wheel to set the first character, then read the window labelled with the second." },
@@ -149,78 +149,8 @@ export function mountExplore(root, ctx) {
     return instance;
   }
 
-  // The colour wheel: hue is the angle, saturation the distance from centre.
-  const tintCanvas = el("canvas", { class: "tint-wheel", width: 152, height: 152, title: "Light colour" });
-  const tintInfo = el("span", { class: "tint-info" });
-  const tintCtx = tintCanvas.getContext("2d");
-
-  function hsvToRgb(h, s, v) {
-    const c = v * s;
-    const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
-    const m = v - c;
-    const seg = Math.floor(h / 60) % 6;
-    const [r, g, b] = [
-      [c, x, 0], [x, c, 0], [0, c, x], [0, x, c], [x, 0, c], [c, 0, x],
-    ][seg];
-    return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
-  }
-
-  function drawTint(current) {
-    const size = tintCanvas.width;
-    const r = size / 2;
-    const img = tintCtx.createImageData(size, size);
-    for (let y = 0; y < size; y++) {
-      for (let x = 0; x < size; x++) {
-        const dx = x - r;
-        const dy = y - r;
-        const d = Math.hypot(dx, dy);
-        const i = (y * size + x) * 4;
-        if (d > r) continue;
-        const hue = ((Math.atan2(dy, dx) * 180) / Math.PI + 360) % 360;
-        const [pr, pg, pb] = hsvToRgb(hue, Math.min(1, d / r), 1);
-        img.data[i] = pr;
-        img.data[i + 1] = pg;
-        img.data[i + 2] = pb;
-        img.data[i + 3] = 255;
-      }
-    }
-    tintCtx.putImageData(img, 0, 0);
-    tintCtx.beginPath();
-    tintCtx.arc(r + Math.cos((current.hue * Math.PI) / 180) * current.sat * r, r + Math.sin((current.hue * Math.PI) / 180) * current.sat * r, 6, 0, Math.PI * 2);
-    tintCtx.lineWidth = 2;
-    tintCtx.strokeStyle = "#fff";
-    tintCtx.stroke();
-    tintCtx.strokeStyle = "#000";
-    tintCtx.lineWidth = 1;
-    tintCtx.stroke();
-    tintInfo.replaceChildren("light ", el("strong", { text: tintColor(current) }));
-  }
-
-  function pickTint(event) {
-    const rect = tintCanvas.getBoundingClientRect();
-    const dx = event.clientX - (rect.left + rect.width / 2);
-    const dy = event.clientY - (rect.top + rect.height / 2);
-    const sat = Math.min(1, Math.hypot(dx, dy) / (rect.width / 2));
-    const hue = ((Math.atan2(dy, dx) * 180) / Math.PI + 360) % 360;
-    setTint({ hue, sat });
-  }
-
-  tintCanvas.addEventListener("pointerdown", (e) => {
-    tintCanvas.setPointerCapture(e.pointerId);
-    pickTint(e);
-  });
-  tintCanvas.addEventListener("pointermove", (e) => {
-    if (e.buttons) pickTint(e);
-  });
-
-  const tintRow = el("div", { class: "tint-row" }, tintCanvas, tintInfo);
-  panel.append(tintRow);
-  drawTint(getTint());
-
-  onTintChange((tint) => {
-    drawTint(tint);
-    volvelle?.setTint(tint);
-  });
+  // The warm/cold cast is switched from the header; the 3D just follows it.
+  onTintChange(() => volvelle?.setTint(getTint()));
 
   onThemeChange(() => {
     if (!volvelle) return;

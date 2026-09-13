@@ -26,24 +26,24 @@
 /* Greyscale e-ink tokens.  Hue comes only from the tint overlay. */
 :root {
   color-scheme: light dark;
-  --bg: #f3f3f1;
-  --bg-2: #eaeae7;
-  --surface: #fbfbfa;
-  --surface-2: #ececea;
-  --ink: #141414;
-  --muted: #5c5c5c;
-  --faint: #8a8a86;
-  --line: #d9d9d6;
-  --line-strong: #a0a09c;
-  --accent: #141414;
-  --accent-ink: #fbfbfa;
-  --accent-soft: #e2e2de;
-  --ok: #2f7a3a;
-  --bad: #b03626;
-  --warn: #8a6a12;
-  --pink: #d7d7d4;
-  --die: #fbfbfa;
-  --die-ink: #141414;
+  --bg: #ececea;
+  --bg-2: #e3e3e0;
+  --surface: #f4f4f2;
+  --surface-2: #e8e8e5;
+  --ink: #2b2b2b;
+  --muted: #656565;
+  --faint: #8f8f8f;
+  --line: #d2d2ce;
+  --line-strong: #a6a6a1;
+  --accent: #3a3a3a;
+  --accent-ink: #f2f2f0;
+  --accent-soft: #dcdcd8;
+  --ok: #3d7a46;
+  --bad: #a5453a;
+  --warn: #82671f;
+  --pink: #d6d6d2;
+  --die: #efefed;
+  --die-ink: #2b2b2b;
   --radius: 10px;
   --mono: "CX Mono", "SFMono-Regular", ui-monospace, "DejaVu Sans Mono", Menlo, Consolas, monospace;
   --symbol: "CX Symbols", "DejaVu Sans", "Segoe UI Symbol", "Noto Sans Symbols 2", system-ui, sans-serif;
@@ -52,24 +52,24 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0f0f0f;
-    --bg-2: #151515;
-    --surface: #171717;
-    --surface-2: #1f1f1f;
-    --ink: #ececec;
-    --muted: #9a9a9a;
-    --faint: #6e6e6e;
-    --line: #2c2c2c;
-    --line-strong: #494949;
-    --accent: #ececec;
-    --accent-ink: #121212;
-    --accent-soft: #2a2a2a;
-    --ok: #6fae7a;
-    --bad: #d47a63;
-    --warn: #c9a44e;
+    --bg: #161616;
+    --bg-2: #1c1c1c;
+    --surface: #1d1d1d;
+    --surface-2: #262626;
+    --ink: #c9c9c9;
+    --muted: #8f8f8f;
+    --faint: #6a6a6a;
+    --line: #2f2f2f;
+    --line-strong: #4a4a4a;
+    --accent: #cfcfcf;
+    --accent-ink: #1a1a1a;
+    --accent-soft: #303030;
+    --ok: #7fae86;
+    --bad: #cf8f7a;
+    --warn: #c2a457;
     --pink: #2a2a2a;
-    --die: #ececec;
-    --die-ink: #121212;
+    --die: #d0d0d0;
+    --die-ink: #1a1a1a;
   }
 }
 
@@ -442,8 +442,11 @@ button:active { transform: translateY(1px); }
 .ex-result.ok { color: var(--ok); }
 .ex-result.bad { color: var(--bad); }
 
-/* Explore tint wheel */
-.tint-row { display: flex; align-items: center; gap: .8rem; margin-top: .9rem; }
-.tint-wheel { width: 76px; height: 76px; border-radius: 50%; border: 1px solid var(--line); touch-action: none; cursor: crosshair; }
-.tint-info { font-size: .8rem; color: var(--muted); }
-.tint-info strong { color: var(--ink); font-family: var(--mono); }
+/* Warm/cold cast switch in the header */
+.cast-switch { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+.cast-switch button {
+  appearance: none; border: 0; background: transparent; color: var(--muted);
+  font: inherit; font-size: .78rem; padding: .3rem .7rem; cursor: pointer;
+}
+.cast-switch button + button { border-left: 1px solid var(--line); }
+.cast-switch button.active { background: var(--accent); color: var(--accent-ink); }

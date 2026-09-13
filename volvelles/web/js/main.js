@@ -9,8 +9,8 @@ import { mountSplit } from "./worksheets/split.js";
 import { mountRecover } from "./worksheets/recover.js";
 import { mountLearn } from "./worksheets/learn.js";
 import { mountInspector } from "./worksheets/inspector.js";
-import { applyTint } from "./theme.js";
-import { toast } from "./ui.js";
+import { applyTint, getCast, onCastChange, setCast } from "./theme.js";
+import { el, toast } from "./ui.js";
 
 const TABS = [
   { id: "bench", mount: mountBench },
@@ -83,6 +83,20 @@ try {
 } catch {
   /* fall back to system fonts if the loader is unavailable */
 }
+
+// Warm/cold cast switch in the header.
+const castHost = document.getElementById("cast-switch");
+const castButtons = {};
+for (const label of ["Warm", "Cold"]) {
+  const id = label.toLowerCase();
+  castButtons[id] = el("button", { type: "button", text: label, onclick: () => setCast(id) });
+  castHost.append(castButtons[id]);
+}
+function paintCast(value) {
+  for (const [id, button] of Object.entries(castButtons)) button.classList.toggle("active", id === value);
+}
+onCastChange(paintCast);
+paintCast(getCast());
 
 const initial = TABS.find((t) => t.id === location.hash.slice(1)) ? location.hash.slice(1) : "bench";
 applyTint();
