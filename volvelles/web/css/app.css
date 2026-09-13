@@ -127,6 +127,7 @@ code { font-family: var(--mono); }
   border-bottom: 1px solid var(--line);
 }
 
+.head-right { display: flex; align-items: center; gap: 1rem; margin-left: auto; flex-wrap: wrap; }
 .brand { display: flex; align-items: center; gap: .8rem; }
 .brand .mark {
   width: 42px; height: 42px;
@@ -197,10 +198,10 @@ main { flex: 1; width: min(1240px, 100%); margin: 0 auto; padding: 1.4rem; }
 .view-row { display: flex; gap: .4rem; margin: .6rem 0 0; }
 button.ghost.active { color: var(--accent-ink); border-color: var(--accent); background: var(--accent); }
 
-.dial-row { display: flex; align-items: center; gap: .6rem; margin: 1rem 0 .4rem; }
-.dial { flex: 1; accent-color: var(--ink); }
-.dial-value { font-family: var(--mono); font-size: .85rem; color: var(--ink); min-width: 4.5rem; text-align: right; }
-.snap { display: flex; align-items: center; gap: .3rem; font-size: .82rem; color: var(--muted); }
+.dial-row { display: flex; align-items: center; gap: .6rem; margin: 1rem 0 .4rem; flex-wrap: wrap; }
+.dial { flex: 1 1 8rem; min-width: 0; accent-color: var(--ink); }
+.dial-value { font-family: var(--mono); font-size: .85rem; color: var(--ink); min-width: 4.5rem; text-align: right; white-space: nowrap; }
+.snap { display: flex; align-items: center; gap: .3rem; font-size: .82rem; color: var(--muted); white-space: nowrap; }
 .snap input { accent-color: var(--ink); }
 
 .readout { margin-top: 1rem; }
